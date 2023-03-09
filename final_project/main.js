@@ -1,12 +1,29 @@
 // Define the SVG canvas dimensions
-const width = 600;
-const height = 400;
+const width = 1000;
+const height = 2000;
 
 // Create the SVG canvas
 const svg = d3.select('body')
   .append('svg')
   .attr('width', width)
   .attr('height', height);
+
+  const tooltip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-10, 0])
+  .html(d => {
+    return `<strong>${d.city}</strong><br>
+    <strong>Date:</strong> ${d.date}<br>
+    <strong>Min Actual temp:</strong> ${d.actual_min_temp.toFixed(0)}&deg;F<br>
+    <strong>Max Actual temp:</strong> ${d.actual_max_temp.toFixed(0)}&deg;F<br>
+    <strong>Min Average temp:</strong> ${d.average_min_temp.toFixed(0)}&deg;F<br>
+    <strong>Max Average temp:</strong> ${d.average_max_temp.toFixed(0)}&deg;F<br>
+    <strong>Min Recorded temp:</strong> ${d.record_min_temp.toFixed(0)}&deg;F<br>
+    <strong>Max Recorded temp:</strong> ${d.record_max_temp.toFixed(0)}&deg;F`;
+  });
+
+// Call the tooltip on the SVG element
+svg.call(tooltip);
 
 // Load the data from the CSV file
 d3.csv('combined_monthly.csv').then(data => {
@@ -19,8 +36,6 @@ d3.csv('combined_monthly.csv').then(data => {
     d.average_max_temp = +d.average_max_temp;
     d.record_min_temp = +d.record_min_temp;
     d.record_max_temp = +d.record_max_temp;
-    d.record_min_temp_year = +d.record_min_temp_year;
-    d.record_max_temp_year = +d.record_max_temp_year;
     d.actual_precipitation = +d.actual_precipitation;
     d.average_precipitation = +d.average_precipitation;
     d.record_precipitation = +d.record_precipitation;
@@ -65,34 +80,81 @@ d3.csv('combined_monthly.csv').then(data => {
   const onCategoryChanged = () => {
     const selectedCity = d3.select('#categorySelect').property('value');
     const filteredData = filterData(selectedCity);
+    chart = svg.append('svg').attr('class', 'chart')
 
     svg.selectAll('circle').remove();
-    // svg.selectAll('text').remove();
-    svg.selectAll('.label').remove();
+    svg.selectAll('.chart text').remove();
+    svg.selectAll('.bar').remove();
+    svg.selectAll('chart y axis').remove();
   
     // Bind the filtered data to circles
-    svg.selectAll('circle')
+    chart.selectAll('circle')
       .data(filteredData)
       .enter()
       .append('circle')
-      .attr('cx', (d, i) => (i % 4) * 100 + 50)
+      .attr('cx', (d, i) => (i % 4) * 100 + 90)
       .attr('cy', (d, i) => Math.floor(i / 4) * 100 + 50)
       .attr('fill', d => colorScale(d.actual_mean_temp))
-      .attr('r', circleRadius);  
+      .attr('r', circleRadius)
+      .on('mouseover', tooltip.show)
+      .on('mouseout', tooltip.hide);
     // Add the month and year labels to each circle
     const dateParser = d3.timeParse('%Y-%m');
     const dateFormatter = d3.timeFormat('%b %Y');
-    svg.selectAll('text')
+    chart.selectAll('text')
       .data(filteredData)
       .enter()
       .append('text')
       .text(d => dateFormatter(dateParser(d.date)))
-      .attr('x', (d, i) => (i % 4) * 100 + 50)
+      .attr('x', (d, i) => (i % 4) * 100 + 90)
       .attr('y', (d, i) => Math.floor(i / 4) * 100 + 50)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
       .attr('fill', '#fff')
-      .attr("class", 'label');
+      .attr("class", 'label')
+
+      
+      
+      var x = d3.scaleBand()
+    .range([0, 400])
+    .padding(0.1);
+    
+var y = d3.scaleLinear()
+    .range([500, 200]);
+
+    x.domain(filteredData.map(function(d) { return d.date; }));
+    const yMin = d3.min(filteredData, function(d) { return d.average_precipitation; });
+const yMax = d3.max(filteredData, function(d) { return d.average_precipitation; });
+y.domain([yMin, yMax]);
+
+    chart.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(40, 700)")
+    .call(d3.axisBottom(x))
+    .selectAll("text")
+    .attr("transform", "rotate(-90)")
+    .attr("dx", "-.8em")
+    .attr("dy", "-.5em")
+    .style("text-anchor", "end");
+
+  // Draw the y axis
+  chart.append("g")
+      .attr("class", "y axis")
+      .attr("transform", "translate(40, 200)")
+      .call(d3.axisLeft(y).ticks(10));
+
+  // Draw the bars
+  chart.selectAll(".bar")
+      .data(filteredData)
+    .enter().append("rect")
+      .attr("class", "bar")
+      .attr("x", function(d) { return x(d.date) + 40; })
+      .attr("y", function(d) { return y(d.average_precipitation); })
+      .attr("width", x.bandwidth())
+      .attr("transform", "translate(0, 200)")
+      .attr('fill', 'steelblue')
+      .attr("height", function(d) { return 500 - y(d.average_precipitation);
+});
   };
   // Define the legend scale
 const legendScale = d3.scaleLinear()
@@ -102,7 +164,7 @@ const legendScale = d3.scaleLinear()
 // Create the legend group
 const legendGroup = svg.append('g')
 .attr('class', 'legend')
-.attr('transform', `translate(${width - 200}, 40)`);
+.attr('transform', `translate(${width - 500}, 20)`);
 
 // Add the legend title
 legendGroup.append('text')

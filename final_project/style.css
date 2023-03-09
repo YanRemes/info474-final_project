@@ -12,3 +12,12 @@ body {
 #main {
     margin: 20px;
 }
+
+.d3-tip {
+    line-height: 1;
+    padding: 6px;
+    background: rgba(240, 240, 240, 0.95);
+    color: #333;
+    border-radius: 4px;
+    font-size: 12px;
+  }
