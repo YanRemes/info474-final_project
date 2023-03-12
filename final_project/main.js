@@ -22,6 +22,8 @@ const svg = d3.select('body')
     <strong>Max Recorded temp:</strong> ${d.record_max_temp.toFixed(0)}&deg;F`;
   });
 
+  
+
 // Call the tooltip on the SVG element
 svg.call(tooltip);
 
@@ -46,11 +48,10 @@ d3.csv('combined_monthly.csv').then(data => {
     .domain(d3.extent(data, d => d.actual_mean_temp))
     .range(['#fef0d9','#fdcc8a','#fc8d59','#e34a33','#b30000','#8b0000','#5b0000','#3a0000','#260000','#1a0000']);
 
+    
   // Define the function to filter the data based on the selected city
   const filterData = city => {
-    if (city === 'all-cities') {
-      return data;
-    } else if (city === 'only-charlotte') {
+    if (city === 'only-charlotte') {
       return data.filter(d => d.city === 'Charlotte');
     } else if (city === 'only-losangeles') {
       return data.filter(d => d.city === 'Los Angeles');
@@ -75,6 +76,88 @@ d3.csv('combined_monthly.csv').then(data => {
 
   // Define the constant radius for the circles
   const circleRadius = 40;
+
+  // Call the filterData function with the initial value of "all-cities"
+const initialData = filterData('only-charlotte');
+
+// Bind the initial data to circles
+svg.selectAll('circle')
+  .data(initialData)
+  .enter()
+  .append('circle')
+  .attr('cx', (d, i) => (i % 4) * 100 + 90)
+  .attr('cy', (d, i) => Math.floor(i / 4) * 100 + 50)
+  .attr('fill', d => colorScale(d.actual_mean_temp))
+  .attr('r', circleRadius)
+  .on('mouseover', tooltip.show)
+  .on('mouseout', tooltip.hide);
+
+// Add the month and year labels to each circle
+const dateParser = d3.timeParse('%Y-%m');
+const dateFormatter = d3.timeFormat('%b %Y');
+svg.selectAll('text')
+  .data(initialData)
+  .enter()
+  .append('text')
+  .text(d => dateFormatter(dateParser(d.date)))
+  .attr('x', (d, i) => (i % 4) * 100 + 90)
+  .attr('y', (d, i) => Math.floor(i / 4) * 100 + 50)
+  .attr('dy', '0.35em')
+  .attr('text-anchor', 'middle')
+  .attr('fill', '#fff')
+  .attr("class", 'label');
+
+  svg.append('text')
+  .attr('x', width / 6)
+  .attr('y', height / 6)
+  .attr('text-anchor', 'middle')
+  .attr('font-size', '24px')
+  .attr('font-weight', 'bold')
+  .text('Precipitation');
+
+  bar = svg.append('svg').attr('class', 'bar')
+  var x = d3.scaleBand()
+  .range([0, 400])
+  .padding(0.1);
+  
+var y = d3.scaleLinear()
+  .range([500, 200]);
+
+  x.domain(initialData.map(function(d) { return d.date; }));
+  const yMin = d3.min(initialData, function(d) { return d.average_precipitation; });
+const yMax = d3.max(initialData, function(d) { return d.average_precipitation; });
+y.domain([yMin, yMax]);
+
+  bar.append("g")
+  .attr("class", "x axis")
+  .attr("transform", "translate(40, 700)")
+  .call(d3.axisBottom(x))
+  .selectAll("text")
+  .attr("transform", "rotate(-90)")
+  .attr("dx", "-.8em")
+  .attr("dy", "-.5em")
+  .style("text-anchor", "end");
+
+// Draw the y axis
+bar.append("g")
+.attr("class", "y axis")
+.attr("transform", "translate(40, 200)")
+.call(d3.axisLeft(y).ticks(10).tickSizeInner(0))
+.select(".domain")
+  .attr("stroke-width", 0);
+
+// Draw the bars
+bar.selectAll(".bar")
+    .data(initialData)
+  .enter().append("rect")
+    .attr("class", "bar")
+    .attr("x", function(d) { return x(d.date) + 40; })
+    .attr("y", function(d) { return y(d.average_precipitation); })
+    .attr("width", x.bandwidth())
+    .attr("transform", "translate(0, 200)")
+    .attr('fill', 'steelblue')
+    .attr("height", function(d) { return 500 - y(d.average_precipitation);
+});
 
   // Define the function to handle the category select change event
   const onCategoryChanged = () => {
@@ -113,19 +196,13 @@ d3.csv('combined_monthly.csv').then(data => {
       .attr('fill', '#fff')
       .attr("class", 'label')
 
-      
-      
-      var x = d3.scaleBand()
-    .range([0, 400])
-    .padding(0.1);
-    
-var y = d3.scaleLinear()
-    .range([500, 200]);
+
 
     x.domain(filteredData.map(function(d) { return d.date; }));
     const yMin = d3.min(filteredData, function(d) { return d.average_precipitation; });
 const yMax = d3.max(filteredData, function(d) { return d.average_precipitation; });
 y.domain([yMin, yMax]);
+
 
     chart.append("g")
     .attr("class", "x axis")
@@ -139,9 +216,11 @@ y.domain([yMin, yMax]);
 
   // Draw the y axis
   chart.append("g")
-      .attr("class", "y axis")
-      .attr("transform", "translate(40, 200)")
-      .call(d3.axisLeft(y).ticks(10));
+  .attr("class", "y axis")
+  .attr("transform", "translate(40, 200)")
+  .call(d3.axisLeft(y).ticks(10).tickSizeInner(0))
+  .select(".domain")
+    .attr("stroke-width", 0);
 
   // Draw the bars
   chart.selectAll(".bar")
